@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import AppShell from '../components/layout/AppShell';
 import MapView from '../components/Map/MapView';
 import OrgDetailDrawer from '../components/Detail/OrgDetailDrawer';
-import MapShellLayout from '../components/map/MapShellLayout';
+import MapShellLayout from '../components/Map/MapShellLayout';
 import { fetchOrganizations } from '../services/api';
 import { useFacets } from '../hooks/useFacets';
 import { useSearchParams } from 'react-router-dom';

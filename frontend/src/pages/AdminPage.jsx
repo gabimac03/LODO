@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import AppShell from '../components/layout/AppShell';
-import AdminTable from '../components/Admin/AdminTable';
-import OrgFormDrawer from '../components/Admin/OrgFormDrawer';
+import AdminTable from '../components/admin/AdminTable';
+import OrgFormDrawer from '../components/admin/OrgFormDrawer';
 import { adminFetchOrganizations as listOrganizations } from '../services/api';
 import {
     LayoutDashboard, Plus, Search,
