@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { adminCreateOrganization as createOrganization, adminGeocodeOrganization as geocodeOrganization, adminUpdateOrganization as updateOrganizationCoordinates } from '../../services/api';
+import {
+    adminCreateOrganization as createOrganization,
+    adminGeocodeOrganization as geocodeOrganization,
+    adminUpdateOrganization as updateOrganization
+} from '../../services/api';
+import { Button } from '../ui/button';
 
 export default function OrgForm({ onCreated, editingOrg, onClear }) {
     const initialForm = {
@@ -13,7 +18,17 @@ export default function OrgForm({ onCreated, editingOrg, onClear }) {
         country: '',
         region: '',
         city: '',
+        description: '',
+        yearFounded: '',
+        logoUrl: '',
         website: '',
+        linkedinUrl: '',
+        instagramUrl: '',
+        contactEmail: '',
+        contactPhone: '',
+        tags: '',
+        technology: '',
+        impactArea: '',
         notes: '',
         lat: '',
         lng: ''
@@ -32,7 +47,17 @@ export default function OrgForm({ onCreated, editingOrg, onClear }) {
                 sectorSecondary: editingOrg.sectorSecondary || '',
                 stage: editingOrg.stage || '',
                 website: editingOrg.website || '',
-                notes: editingOrg.notes || ''
+                notes: editingOrg.notes || '',
+                description: editingOrg.description || '',
+                yearFounded: editingOrg.yearFounded || '',
+                logoUrl: editingOrg.logoUrl || '',
+                linkedinUrl: editingOrg.linkedinUrl || '',
+                instagramUrl: editingOrg.instagramUrl || '',
+                contactEmail: editingOrg.contactEmail || '',
+                contactPhone: editingOrg.contactPhone || '',
+                tags: Array.isArray(editingOrg.tags) ? editingOrg.tags.join(', ') : '',
+                technology: Array.isArray(editingOrg.technology) ? editingOrg.technology.join(', ') : '',
+                impactArea: Array.isArray(editingOrg.impactArea) ? editingOrg.impactArea.join(', ') : ''
             });
         } else {
             setForm(initialForm);
@@ -45,26 +70,29 @@ export default function OrgForm({ onCreated, editingOrg, onClear }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (editingOrg) return; // En modo edición no usamos el submit del form completo para crear
-
         setLoading(true);
         setError(null);
 
-        const payload = { ...form };
-        if (payload.lat) payload.lat = parseFloat(payload.lat);
-        if (payload.lng) payload.lng = parseFloat(payload.lng);
-
-        if ((payload.lat && !payload.lng) || (!payload.lat && payload.lng)) {
-            setError("Si incluyes coordenadas, debes poner Latitud y Longitud.");
-            setLoading(false);
-            return;
-        }
+        const payload = {
+            ...form,
+            yearFounded: form.yearFounded ? parseInt(form.yearFounded) : 0,
+            lat: form.lat ? parseFloat(form.lat) : null,
+            lng: form.lng ? parseFloat(form.lng) : null,
+            tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(t => t !== '') : [],
+            technology: form.technology ? form.technology.split(',').map(t => t.trim()).filter(t => t !== '') : [],
+            impactArea: form.impactArea ? form.impactArea.split(',').map(t => t.trim()).filter(t => t !== '') : []
+        };
 
         try {
-            await createOrganization(payload);
-            alert("Organización creada exitosamente (DRAFT)");
+            if (editingOrg) {
+                await updateOrganization(payload.id, payload);
+                alert("Organización actualizada!");
+            } else {
+                await createOrganization(payload);
+                alert("Organización creada exitosamente (DRAFT)");
+            }
             onCreated();
-            setForm(initialForm);
+            if (!editingOrg) setForm(initialForm);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -79,27 +107,7 @@ export default function OrgForm({ onCreated, editingOrg, onClear }) {
         try {
             const updated = await geocodeOrganization(editingOrg.id);
             setForm(prev => ({ ...prev, lat: updated.lat, lng: updated.lng }));
-            alert("Coordenadas encontradas y guardadas!");
-            onCreated(); // Refresh list to see updated search/status if needed
-        } catch (err) {
-            setError("Error geocodificando: " + err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleUpdateCoords = async () => {
-        if (!editingOrg) return;
-        setLoading(true);
-        setError(null);
-        try {
-            const lat = parseFloat(form.lat);
-            const lng = parseFloat(form.lng);
-            if (isNaN(lat) || isNaN(lng)) {
-                throw new Error("Latitud y Longitud deben ser números válidos");
-            }
-            await updateOrganizationCoordinates(editingOrg.id, { lat, lng });
-            alert("Coordenadas actualizadas manualmente!");
+            alert("Coordenadas detectadas!");
             onCreated();
         } catch (err) {
             setError(err.message);
@@ -109,108 +117,114 @@ export default function OrgForm({ onCreated, editingOrg, onClear }) {
     };
 
     return (
-        <div className="admin-form-container" style={{ padding: '1rem', background: '#f9fafb', borderRadius: '8px', border: editingOrg ? '2px solid #2563eb' : 'none' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <h3>{editingOrg ? 'Editar / Coordenadas' : 'Crear Organización'}</h3>
-                {editingOrg && <button onClick={onClear} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer' }}>Limpiar X</button>}
+        <div className="bg-card p-8 rounded-[2.5rem] border shadow-2xl max-w-4xl mx-auto overflow-hidden">
+            <div className="flex items-center justify-between mb-8">
+                <div>
+                    <h2 className="text-3xl font-black tracking-tighter italic">
+                        {editingOrg ? 'EDITAR' : 'NUEVA'} <span className="text-primary">STARTUP</span>
+                    </h2>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground opacity-60">Portal de administración</p>
+                </div>
+                {editingOrg && (
+                    <Button variant="ghost" onClick={onClear} className="rounded-2xl hover:bg-destructive/10 hover:text-destructive font-bold text-xs uppercase tracking-widest">
+                        Cancelar Edición
+                    </Button>
+                )}
             </div>
 
-            {error && <div style={{ color: 'red', marginBottom: '1rem', fontSize: '0.8rem' }}>{error}</div>}
-
-            <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div style={{ gridColumn: editingOrg ? 'span 2' : 'span 1' }}>
-                    <label>ID</label>
-                    <input name="id" value={form.id} onChange={handleChange} required disabled={!!editingOrg} className="filter-select" />
+            {error && (
+                <div className="bg-destructive/10 border-l-4 border-destructive text-destructive p-4 rounded-xl mb-6 text-sm font-bold">
+                    ⚠️ {error}
                 </div>
-                {!editingOrg && (
-                    <div>
-                        <label>Nombre</label>
-                        <input name="name" value={form.name} onChange={handleChange} required className="filter-select" />
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+                {/* ID & Name */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest opacity-50 ml-2">Identificador (ID) *</label>
+                        <input name="id" value={form.id} onChange={handleChange} required disabled={!!editingOrg} className="w-full bg-muted/30 border-none h-14 px-6 rounded-2xl focus:ring-2 ring-primary/20 font-bold transition-all disabled:opacity-50" placeholder="slug-de-la-startup" />
                     </div>
-                )}
-
-                {/* En modo edición mostramos menos campos si solo queremos coords, pero dejamos los campos de ubicación para geocode context */}
-                <div>
-                    <label>País</label>
-                    <input name="country" value={form.country} onChange={handleChange} required disabled={!!editingOrg} className="filter-select" />
-                </div>
-                <div>
-                    <label>Ciudad</label>
-                    <input name="city" value={form.city} onChange={handleChange} required disabled={!!editingOrg} className="filter-select" />
-                </div>
-
-                <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '4px', gridColumn: 'span 2' }}>
-                    <label style={{ fontWeight: 'bold', color: '#1e40af' }}>Coordenadas</label>
-                    <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                        <div style={{ flex: 1 }}>
-                            <label>Latitud</label>
-                            <input name="lat" type="number" step="any" value={form.lat} onChange={handleChange} className="filter-select" />
-                        </div>
-                        <div style={{ flex: 1 }}>
-                            <label>Longitud</label>
-                            <input name="lng" type="number" step="any" value={form.lng} onChange={handleChange} className="filter-select" />
-                        </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest opacity-50 ml-2">Nombre Comercial *</label>
+                        <input name="name" value={form.name} onChange={handleChange} required className="w-full bg-muted/30 border-none h-14 px-6 rounded-2xl focus:ring-2 ring-primary/20 font-bold transition-all" placeholder="Nombre de la empresa" />
                     </div>
-                    {editingOrg && (
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <button type="button" onClick={handleGeocode} disabled={loading} style={actionBtnStyle('#10b981')}>
-                                🔍 Buscar Coords (API)
-                            </button>
-                            <button type="button" onClick={handleUpdateCoords} disabled={loading} style={actionBtnStyle('#2563eb')}>
-                                💾 Guardar Coords
-                            </button>
-                        </div>
-                    )}
                 </div>
 
-                {!editingOrg && (
-                    <>
-                        <div>
-                            <label>Tipo</label>
-                            <input name="organizationType" value={form.organizationType} onChange={handleChange} required className="filter-select" />
-                        </div>
-                        <div>
-                            <label>Sector Primario</label>
-                            <input name="sectorPrimary" value={form.sectorPrimary} onChange={handleChange} required className="filter-select" />
-                        </div>
-                        <div>
-                            <label>Estado Resultado</label>
-                            <input name="outcomeStatus" value={form.outcomeStatus} onChange={handleChange} required className="filter-select" />
-                        </div>
-                        <div>
-                            <label>Región</label>
-                            <input name="region" value={form.region} onChange={handleChange} required className="filter-select" />
-                        </div>
-                    </>
-                )}
+                {/* Clasificación */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest opacity-50 ml-2">Tipo de Org *</label>
+                        <input name="organizationType" value={form.organizationType} onChange={handleChange} required className="w-full bg-muted/30 border-none h-14 px-6 rounded-2xl focus:ring-2 ring-primary/20 font-bold transition-all" placeholder="Startup, VC, Hub..." />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest opacity-50 ml-2">Sector Primario *</label>
+                        <input name="sectorPrimary" value={form.sectorPrimary} onChange={handleChange} required className="w-full bg-muted/30 border-none h-14 px-6 rounded-2xl focus:ring-2 ring-primary/20 font-bold transition-all" placeholder="Fintech, Agtech..." />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest opacity-50 ml-2">Madurez / Stage</label>
+                        <input name="stage" value={form.stage} onChange={handleChange} className="w-full bg-muted/30 border-none h-14 px-6 rounded-2xl focus:ring-2 ring-primary/20 font-bold transition-all" placeholder="Seed, Series A..." />
+                    </div>
+                </div>
 
-                {!editingOrg && (
-                    <button type="submit" disabled={loading} style={{
-                        gridColumn: '1 / -1',
-                        padding: '10px',
-                        background: '#2563eb',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: loading ? 'not-allowed' : 'pointer',
-                        marginTop: '10px'
-                    }}>
-                        {loading ? 'Guardando...' : 'Crear Organización'}
-                    </button>
-                )}
+                {/* Descripción */}
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest opacity-50 ml-2">Descripción del Proyecto</label>
+                    <textarea name="description" value={form.description} onChange={handleChange} className="w-full bg-muted/30 border-none p-6 rounded-[2rem] focus:ring-2 ring-primary/20 font-medium transition-all min-h-[120px]" placeholder="Breve descripción de lo que hacen..." />
+                </div>
+
+                {/* Ubicación Avanzada */}
+                <div className="bg-muted/20 p-8 rounded-[2.5rem] space-y-6">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-primary text-xs tracking-tighter font-black">GEO</span>
+                        </div>
+                        <h4 className="text-xs font-black uppercase tracking-widest">Localización Geográfica</h4>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <input name="country" value={form.country} onChange={handleChange} placeholder="País" className="bg-background border-none h-12 px-5 rounded-xl font-bold text-sm" />
+                        <input name="region" value={form.region} onChange={handleChange} placeholder="Provincia/Estado" className="bg-background border-none h-12 px-5 rounded-xl font-bold text-sm" />
+                        <input name="city" value={form.city} onChange={handleChange} placeholder="Ciudad" className="bg-background border-none h-12 px-5 rounded-xl font-bold text-sm" />
+                    </div>
+
+                    <div className="flex gap-4 items-center">
+                        <div className="flex-1 grid grid-cols-2 gap-4">
+                            <input name="lat" value={form.lat} onChange={handleChange} placeholder="Latitud" className="bg-background border-none h-12 px-5 rounded-xl font-bold text-sm" />
+                            <input name="lng" value={form.lng} onChange={handleChange} placeholder="Longitud" className="bg-background border-none h-12 px-5 rounded-xl font-bold text-sm" />
+                        </div>
+                        {editingOrg && (
+                            <Button type="button" onClick={handleGeocode} disabled={loading} className="h-12 rounded-xl bg-white text-primary hover:bg-primary hover:text-white shadow-sm font-black text-[10px] uppercase tracking-widest px-6 transition-all border">
+                                {loading ? '...' : 'Auto-Geocode'}
+                            </Button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Redes y Contacto */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest opacity-50 ml-2">Website URL</label>
+                        <input name="website" value={form.website} onChange={handleChange} className="w-full bg-muted/30 border-none h-14 px-6 rounded-2xl focus:ring-2 ring-primary/20 font-bold transition-all" placeholder="https://..." />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest opacity-50 ml-2">LinkedIn</label>
+                        <input name="linkedinUrl" value={form.linkedinUrl} onChange={handleChange} className="w-full bg-muted/30 border-none h-14 px-6 rounded-2xl focus:ring-2 ring-primary/20 font-bold transition-all" placeholder="https://linkedin.com/company/..." />
+                    </div>
+                </div>
+
+                {/* Tags */}
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest opacity-50 ml-2">Etiquetas / Tags (separados por coma)</label>
+                    <input name="tags" value={form.tags} onChange={handleChange} className="w-full bg-muted/30 border-none h-14 px-6 rounded-2xl focus:ring-2 ring-primary/20 font-bold transition-all" placeholder="agtech, lot, satelital..." />
+                </div>
+
+                <div className="pt-8 flex gap-4">
+                    <Button type="submit" disabled={loading} className="flex-1 h-16 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 text-sm active:scale-95 transition-all">
+                        {loading ? 'Procesando...' : (editingOrg ? 'Actualizar Startup' : 'Crear en Borrador')}
+                    </Button>
+                </div>
             </form>
-            {editingOrg && <p style={{ fontSize: '0.7rem', color: '#666', marginTop: '1rem' }}>* En modo edición puedes actualizar coordenadas manual o vía Nominatim.</p>}
         </div>
     );
 }
-
-const actionBtnStyle = (bg) => ({
-    flex: 1,
-    padding: '8px',
-    background: bg,
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '0.8rem'
-});
